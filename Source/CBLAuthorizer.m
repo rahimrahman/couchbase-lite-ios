@@ -175,7 +175,7 @@ static BOOL acceptProblems(SecTrustRef trust, NSString* host) {
             }
 #endif
             if (!accept)
-                return NO;
+                return YES;
         }
         i++;
     }
