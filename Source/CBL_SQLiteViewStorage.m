@@ -28,6 +28,7 @@
 #import "FMDatabaseAdditions.h"
 #import "FMResultSet.h"
 
+SInt64 const kLIMIT = 50000;
 
 @implementation CBL_SQLiteViewStorage
 {
@@ -386,8 +387,10 @@
             [sql appendString: @"AND +deleted=0 "];
         if (!allDocTypes && docTypes.count > 0)
             [sql appendFormat: @"AND doc_type IN (%@) ", CBLJoinSQLQuotedStrings(docTypes.allObjects)];
-        [sql appendString: @"ORDER BY +revs.doc_id, +deleted, +revid DESC"];
-        CBL_FMResultSet* r = [fmdb executeQuery: sql, @(minLastSequence)];
+        [sql appendString: @"ORDER BY +revs.doc_id, +deleted, +revid "];
+        NSMutableString* sqlLimit = [NSMutableString stringWithFormat:@"LIMIT %@", @(kLIMIT)];
+        NSMutableString* sqlCombined = [NSMutableString stringWithFormat:@"%@ %@", sql, sqlLimit];
+        CBL_FMResultSet* r = [fmdb executeQuery: sqlCombined, @(minLastSequence)];
         if (!r)
             return dbStorage.lastDbError;
 
@@ -509,6 +512,16 @@
                     }
                 }
                 curView = nil;
+            }
+            if (![r hasAnotherRow]) {
+                [r close];
+                r = nil;
+                LogTo(View, @"<R2> sequence => %@", @(sequence));
+                r = [fmdb executeQuery: sqlCombined, @(sequence)];
+                
+                if ([r hasAnotherRow]) {
+                    keepGoing = [r next];
+                }
             }
         }
         [r close];
